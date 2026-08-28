@@ -1,6 +1,6 @@
 package scheduler
 
-type Schecuker interface {
+type Scheduler interface {
 	SelectCandidateNodes()
 	Score()
 	Pick()

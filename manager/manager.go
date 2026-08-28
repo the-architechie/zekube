@@ -1,8 +1,8 @@
 package manager
 
 import (
-	"cube-orchestrator/task"
 	"fmt"
+	"zekube/task"
 
 	"github.com/golang-collections/collections/queue"
 	"github.com/google/uuid"
