@@ -22,7 +22,7 @@ func main() {
 		Disk:   1,
 	}
 
-	te := task.TaskEvent{
+	te := task.Event{
 		ID:        uuid.New(),
 		State:     task.Pending,
 		Timestamp: time.Now(),
@@ -47,7 +47,7 @@ func main() {
 	m := manager.Manager{
 		Pending: *queue.New(),
 		TaskDb:  make(map[string][]*task.Task),
-		EventDB: make(map[string][]*task.TaskEvent),
+		EventDB: make(map[string][]*task.Event),
 		Workers: []string{w.Name},
 	}
 

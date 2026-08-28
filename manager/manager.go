@@ -11,8 +11,8 @@ import (
 // Manager will need to keep track of the workers in the cluster
 type Manager struct {
 	Pending        queue.Queue
-	TaskDb         map[string][]*task.Task      // this store the tasks
-	EventDB        map[string][]*task.TaskEvent // stores events
+	TaskDb         map[string][]*task.Task  // this store the tasks
+	EventDB        map[string][]*task.Event // stores events
 	Workers        []string
 	WorkersTaskMap map[string][]uuid.UUID // WorkersTaskMap maps worker IDs to the list of task UUIDs assigned to them.
 	TaskWorkerMap  map[uuid.UUID]string   // TaskWorkerMap maps task UUIDs to the IDs of the workers responsible for executing them.
