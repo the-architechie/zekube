@@ -4,12 +4,16 @@ A minimal Docker container orchestrator written in Go.
 
 ## Description
 
-Zekube is a simplified container orchestrator designed for learning purposes. While Kubernetes is powerful, it often feels like a black box. This project is an implementation attempt to understand the inner workings of a typical orchestrator, focusing on the fundamental components like scheduling, worker nodes, and task management.
+Zekube is a simplified container orchestrator designed for learning purposes. While Kubernetes is powerful, it often
+feels like a black box. This project is an implementation attempt to understand the inner workings of a typical
+orchestrator, focusing on the fundamental components like scheduling, worker nodes, and task management.
 
 ## Project Structure
 
-- **Manager**: The central control plane that manages the state of the cluster, keeps track of workers, and handles task scheduling.
-- **Worker**: Runs on each node in the cluster. It receives tasks from the manager and executes them using the Docker API.
+- **Manager**: The central control plane that manages the state of the cluster, keeps track of workers, and handles task
+  scheduling.
+- **Worker**: Runs on each node in the cluster. It receives tasks from the manager and executes them using the Docker
+  API.
 - **Task**: The smallest unit of work, representing a container to be run.
 - **Scheduler**: Responsible for deciding which worker node should run a particular task.
 - **Node**: Represents a physical or virtual machine in the cluster.
@@ -32,7 +36,8 @@ Zekube is a simplified container orchestrator designed for learning purposes. Wh
 
 2. Build the project:
 
-3. Run the main entry point (demonstrates container creation and removal):
+
+3. Run the main entry point:
    ```bash
-   go run main.go
+   ZEKUBE_HOST=localhost ZEKUBE_PORT=5555 go run main.go go run main.go
    ```
