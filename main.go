@@ -2,125 +2,48 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
+	"strconv"
 	"time"
-	"zekube/manager"
-	"zekube/node"
 	"zekube/task"
 	"zekube/worker"
 
 	"github.com/golang-collections/collections/queue"
 	"github.com/google/uuid"
-	"github.com/moby/moby/client"
 )
 
 func main() {
-	t := task.Task{
-		ID:     uuid.New(),
-		Name:   "Task-1",
-		State:  task.Pending,
-		Image:  "Image-1",
-		Memory: 1024,
-		Disk:   1,
-	}
 
-	te := task.Event{
-		ID:        uuid.New(),
-		State:     task.Pending,
-		Timestamp: time.Now(),
-		Task:      t,
-	}
+	host := os.Getenv("ZEKUBE_HOST")
+	port, _ := strconv.Atoi(os.Getenv("ZEKUBE_PORT"))
 
-	fmt.Printf("task: %v\n", t)
-	fmt.Printf("task event: %v\n", te)
+	fmt.Println("Starting the Zekube worker")
+	db := make(map[uuid.UUID]*task.Task)
 
+	// create a worker
 	w := worker.Worker{
-		Name:  "worker-1",
 		Queue: *queue.New(),
-		Db:    make(map[uuid.UUID]*task.Task),
+		Db:    db,
 	}
-
-	fmt.Printf("worker:  %v\n", w)
-	w.CollectStatus()
-	w.RunTask()
-	w.StartTask()
-	w.StopTask()
-
-	m := manager.Manager{
-		Pending: *queue.New(),
-		TaskDb:  make(map[string][]*task.Task),
-		EventDB: make(map[string][]*task.Event),
-		Workers: []string{w.Name},
-	}
-
-	fmt.Printf("manager: %v\n", m)
-
-	m.SelectWorker()
-	m.UpdateTasks()
-	m.SendWork()
-
-	n := node.Node{
-		Name:   "Node-1",
-		Ip:     "192.168.1.1",
-		Cores:  4,
-		Memory: 1024,
-		Disk:   25,
-		Role:   "worker",
-	}
-
-	fmt.Printf("node:  %v\n", n)
-
-	fmt.Printf("Creating a test container\n")
-
-	dockerTask, dockerResult := createContainer()
-
-	if dockerResult == nil {
-		fmt.Printf("An error occured during container creation")
-		os.Exit(1)
-	}
-	if dockerResult.Error != nil {
-		fmt.Printf("%v", dockerResult.Error)
-		os.Exit(1)
-	}
-	time.Sleep(time.Second * 5)
-	fmt.Printf("stopping container %s\n", dockerResult.ContainerId)
-	_ = stopContainer(dockerTask, dockerResult.ContainerId)
+	api := worker.Api{Address: host, Port: port, Worker: &w}
+	fmt.Println("Starting a task")
+	go runTasks(&w)
+	go w.CollectStats()
+	api.Start()
 }
 
-func createContainer() (*task.Docker, *task.DockerResult) {
-	c := task.Config{
-		Name:  "test-container-1",
-		Image: "postgres:13",
-		Env: []string{
-			"POSTGRESS_USER=zekube",
-			"POSTGRES_PASSWORD=secret",
-		},
+func runTasks(w *worker.Worker) {
+	for {
+		if w.Queue.Len() != 0 {
+			result := w.RunTask()
+			if result.Error != nil {
+				log.Printf("Error running task: %v\n", result.Error)
+			}
+		} else {
+			log.Printf("No tasks to process currently \n")
+		}
+		log.Printf("Sleeping for 10 seconds... \n")
+		time.Sleep(10 * time.Second)
 	}
-
-	dc, _ := client.New(client.FromEnv)
-
-	d := task.Docker{
-		Client: dc,
-		Config: c,
-	}
-	result := d.Run()
-	if result.Error != nil {
-		fmt.Printf("%v\n", result.Error)
-		return nil, nil
-	}
-	fmt.Printf("Container %s is running with config %v\n", result.ContainerId, c)
-	return &d, &result
-
-}
-
-func stopContainer(d *task.Docker, id string) *task.DockerResult {
-	result := d.Stop(id)
-
-	if result.Error != nil {
-		fmt.Printf("%v\n", result.Error)
-		return nil
-	}
-
-	fmt.Printf("Container %s has been stopped and removed\n", result.ContainerId)
-	return &result
 }

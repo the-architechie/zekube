@@ -8,7 +8,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/docker/go-connections/nat"
 	"github.com/google/uuid"
 	"github.com/moby/moby/api/pkg/stdcopy"
 	"github.com/moby/moby/api/types/container"
@@ -28,16 +27,18 @@ const (
 
 type Task struct {
 	ID            uuid.UUID
+	ContainerID   string
 	Name          string
 	State         State
 	Image         string
+	Cpu           float64
 	Memory        int
 	Disk          int
-	ExposedPorts  nat.PortSet
+	ExposedPorts  network.PortSet
 	PortBindings  map[string]string
-	RestartPolicy string
-	startTime     time.Time
-	finishTime    time.Time
+	RestartPolicy container.RestartPolicyMode
+	StartTime     time.Time
+	FinishTime    time.Time
 }
 
 type Event struct {
@@ -63,16 +64,36 @@ type Config struct {
 	RestartPolicy container.RestartPolicyMode // tells docker daemon what to do if the container dies unexpectedly
 }
 
-// Docker - encapsulates everything we need to task as a docker container
+func NewConfig(t *Task) *Config {
+	return &Config{
+		Name:          t.Name,
+		ExposedPorts:  t.ExposedPorts,
+		Image:         t.Image,
+		Cpu:           t.Cpu,
+		Memory:        int64(t.Memory),
+		Disk:          int64(t.Disk),
+		RestartPolicy: t.RestartPolicy,
+	}
+}
+
+// Docker - encapsulates everything we need to run a task as a docker container
 type Docker struct {
 	Client *client.Client // Docker client
 	Config Config         // task configuration
 }
 
+func NewDocker(c *Config) *Docker {
+	dc, _ := client.New(client.FromEnv)
+	return &Docker{
+		Client: dc,
+		Config: *c,
+	}
+}
+
 type DockerResult struct {
 	Error       error
 	Action      string
-	ContainerId string
+	ContainerID string
 	Result      string
 }
 
@@ -139,7 +160,7 @@ func (d *Docker) Run() DockerResult {
 	}
 	stdcopy.StdCopy(os.Stdout, os.Stderr, out)
 	return DockerResult{
-		ContainerId: resp.ID,
+		ContainerID: resp.ID,
 		Action:      "start",
 		Result:      "success",
 	}
@@ -160,8 +181,10 @@ func (d *Docker) Stop(id string) DockerResult {
 		log.Printf("Failed to remove container %s: %v", id, err)
 		return DockerResult{Error: err}
 	}
+	log.Printf("Stopped and removed container %v", id)
+
 	return DockerResult{
-		ContainerId: id,
+		ContainerID: id,
 		Action:      "stop",
 		Result:      "success",
 	}
